@@ -57,7 +57,7 @@ app.get('/tasks', (req, res) => {
 });
 
 // retrieve a single task by ID
-app.get('tasks/:id', (req, res) => {
+app.get('/tasks/:id', (req, res) => {
     getTaskByIdController(req, res);
 })
 
@@ -67,7 +67,7 @@ app.put('/tasks/:id', (req, res) => {
 })
 
 // delete a task
-app.delete('tasks/:id', (req, res) => {
+app.delete('/tasks/:id', (req, res) => {
     deleteTaskController(req, res);
 })
 

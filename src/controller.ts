@@ -109,12 +109,11 @@ export function deleteTaskController(req: any, res: any) {
 
 export function completeTaskController(req: any, res: any) {
     const taskId = req.body.id; // id sent by the user
-    const title = req.body.title; // title sent by the user
     const status = 'completed'; // new status
 
-    const sql = 'UPDATE task SET status = ? WHERE id = ? AND title = ?';
+    const sql = 'UPDATE task SET status = ? WHERE id = ?';
     
-    db.query(sql, [status, taskId, title], (err, results) => {
+    db.query(sql, [status, taskId], (err, results) => {
         if (err) {
             console.error('Error completing task:', err);
             return res.status(500).json({ error: 'Database error' });
