@@ -1,12 +1,14 @@
 // MAIN ENTRY POINT FILE
-const express = require('express');
-const http = require('http'); // Required to create raw HTTP server
+
+
+// const express = require('express');
+import express from 'express'; // Importing express for creating the server
+
+// const mysql = require('mysql2');
+import mysql from 'mysql2'; // Importing mysql2 for database connection
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Create HTTP server from express app
-const server = http.createServer(app);
 
 app.use(express.json());
 
@@ -17,13 +19,11 @@ app.get('/', (req, res) => {
 });
 
 // connect database
-const mysql = require('mysql2');
-
 const db = mysql.createConnection({
     host: 'localhost',      // or your DB host
     user: 'root',           // your DB username
     password: 'root', // your DB password
-    database: 'history'  // your DB name
+    database: 'todo'  // your DB name
 });
 
 db.connect((err) => {
@@ -32,18 +32,26 @@ db.connect((err) => {
         return;
     }
     console.log('Connected to the database');
+
+    // db.query('SELECT 1', (err, results) => {
+    //     if (err) {
+    //         console.error('Error executing query:', err);
+    //         return;
+    //     }
+    //     console.log('Database connection is working:', results);
+    // });
 });
 
 
 app.post('/tasks', (req,res) => {
-    const sql = 'INSERT INTO task (title, description, status) VALUES (?,?,?)';
-    const title = req.body.title;
-    const description = req.body.description;
-    const status = req.body.status;
+    const sql: string = 'INSERT INTO task (title, description, status) VALUES (?,?,?)';
+    const title: string = req.body.title;
+    const description: string = req.body.description;
+    const status: string = req.body.status;
     if (!title || !description || !status) {
         return res.status(400).json({ error: 'Title, description, and status are required' });
     }
-    
+
     db.query(sql, [title, description, status], (err, result) => {
         if (err) {
             console.error('Error inserting task:', err);
@@ -58,9 +66,14 @@ app.post('/tasks', (req,res) => {
 
 // retrieve data from the database
 app.get('/tasks', (req, res) => {
-    const sql = 'SELECT * FROM task';
+    const sql: string = 'SELECT * FROM task limit ? offset ?';
 
-    db.query(sql, (err, results) => {
+    // pagination
+    const page = Number(req.query.pageNo) || 1; // retrieves the page number from the query string
+    const pageSz = Number(req.query.pageSz) || 10; // retrieves the limit from the query string
+    const offset = (page - 1) * pageSz; // calculates how many pages to skip based on page number and limit
+
+    db.query(sql, [pageSz,offset], (err, results) => {
         if (err) {
             console.error('Error retrieving tasks:', err);
             return res.status(500).json({ error: 'Database error' });
@@ -72,27 +85,22 @@ app.get('/tasks', (req, res) => {
 
 app.get('tasks/:id', (req, res) => {
     const taskId = req.params.id;
+    const sql : string = 'SELECT * FROM task WHERE id = ?';
 
-    // pagination
-    const page = parseInt(req.query.page) || 1; // retrieves the page number from the query string
-    const limit = parseInt(req.query.limit) || 10; // retrieves the limit from the query string
-    const offset = (page - 1) * limit; // calculates how many pages to skip based on page number and limit
-
-    const sql = 'SELECT * FROM task WHERE id = ? page ? limit ? offset ?';
-
-    db.query(sql, [taskId,page,limit,offset], (err, results) => {
+    db.query(sql, [taskId], (err, results: any) => {
         if (err) {
             console.error('Error retrieving task:', err);
             return res.status(500).json({ error: 'Database error' });
         }
-        console.log('Task retrieved', results[0]); // why?
+        console.log('Task retrieved', results[0]); // mysql always returns an array, so we access the first element which the required answer
         return res.status(200).json(results[0]);
     })
 })
 
 
 app.put('/tasks/:id', (req, res) => {
-    const taskId = req.params.id;
+    const taskId = req.params.id; // this is for parameters
+    // const taskId = req.body.id; // this is for body
     const title = req.body.title;
     const description = req.body.description;
     const status = req.body.status;
@@ -102,7 +110,7 @@ app.put('/tasks/:id', (req, res) => {
 
     const sql = 'UPDATE task SET title = ?, description = ?, status = ? WHERE id = ?';
 
-    db.query(sql, [title,description,status,taskId], (req, res) => {
+    db.query(sql, [title,description,status,taskId], (err, results) => {
         if (err) {
             console.error('Error updating task:', err);
             return res.status(500).json({ error: 'Database error' });
@@ -111,7 +119,6 @@ app.put('/tasks/:id', (req, res) => {
         return res.status(200).json({ message: 'Task updated successfully' });
     })
 })
-
 
 
 app.delete('tasks/:id', (req, res) => {
@@ -129,7 +136,24 @@ app.delete('tasks/:id', (req, res) => {
 })
 
 
+// create another for completing the task
+// app.post()
+
+// http://localhost:5000/tasks/search?status=PENDING&title=Task1 - for POSTMAN
+// another API for search/filter using status or title
+app.get('/tasks/search', (req, res) => {
+    const status = req.query.status;
+    const title = req.query.title;
+
+    if (!status && !title) {
+        return res.status(400).json({ error: 'Status and title are required'});
+    }
+
+    const sql = 'SELECT * FROM task where status = ? and title like ?';
+})
+
+
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Express app listening at http://localhost:${PORT}`);
 });
